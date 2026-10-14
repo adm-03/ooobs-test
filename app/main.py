@@ -1,6 +1,5 @@
 import asyncio
 import os
-from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -41,25 +40,25 @@ class Syncer:
         self._fetched_at = asyncio.get_running_loop().time()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with httpx.AsyncClient(timeout=10) as client:
-        app.state.syncer = Syncer(client)
-        yield
+app = FastAPI(title="Orders sync")
 
 
-app = FastAPI(title="Orders sync", lifespan=lifespan)
+def get_syncer() -> Syncer:
+    # Лениво, а не через lifespan: в serverless (Vercel) lifespan не гарантирован.
+    if not hasattr(app.state, "syncer"):
+        app.state.syncer = Syncer(httpx.AsyncClient(timeout=10))
+    return app.state.syncer
 
 
 @app.get("/", response_model=SyncResult)
 @app.get("/api/clients", response_model=SyncResult)
 async def clients() -> SyncResult:
-    return await app.state.syncer.get()
+    return await get_syncer().get()
 
 
 @app.post("/api/sync", response_model=SyncResult)
 async def run_sync() -> SyncResult:
-    return await app.state.syncer.get(force=True)
+    return await get_syncer().get(force=True)
 
 
 @app.get("/health")

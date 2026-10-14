@@ -8,3 +8,5 @@
 - `GET /health`
 
 Запуск: `uv run uvicorn app.main:app`. Тесты: `uv run pytest`. Деплой: Dockerfile / `render.yaml` (Render, Railway, Fly).
+
+Vercel: репозиторий деплоится без настроек (FastAPI находится по `app/main.py`).
