@@ -44,9 +44,20 @@ def _parse_dt(value: object) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
+def _amount(order: dict[str, Any]) -> int | float:
+    """Число как есть (5000 остаётся 5000, а не 5000.0); мусор считаем нулём."""
+    value = order.get("amount")
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return value
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0
+
+
 def _rank(order: dict[str, Any]) -> tuple[float, datetime]:
     # Больший amount важнее; при равенстве побеждает более поздняя заявка.
-    return float(order.get("amount") or 0), _parse_dt(order.get("created_at"))
+    return _amount(order), _parse_dt(order.get("created_at"))
 
 
 def sync(orders: list[dict[str, Any]]) -> SyncResult:
@@ -54,6 +65,9 @@ def sync(orders: list[dict[str, Any]]) -> SyncResult:
     best: dict[str, dict[str, Any]] = {}  # dict хранит порядок первого появления телефона
     invalid = 0
     for order in orders:
+        if not isinstance(order, dict):
+            invalid += 1
+            continue
         phone = normalize_phone(order.get("phone"))
         if phone is None:
             invalid += 1
@@ -67,7 +81,7 @@ def sync(orders: list[dict[str, Any]]) -> SyncResult:
             name=o.get("name") or "",
             phone=phone,
             email=o.get("email") or "",
-            amount=o.get("amount") or 0,
+            amount=_amount(o),
         )
         for phone, o in best.items()
     ]

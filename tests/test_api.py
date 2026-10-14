@@ -12,10 +12,9 @@ async def client(monkeypatch):
         calls["n"] += 1
         return httpx.Response(200, json=[{"id": 1, "name": "A", "phone": "89991234567", "email": "", "amount": 5, "created_at": "2026-10-01T00:00:00Z"}])
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as upstream:
-        main.app.state.syncer = main.Syncer(upstream)
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app), base_url="http://t") as c:
-            yield c, calls
+    main.app.state.syncer = main.Syncer(httpx.MockTransport(handler))
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=main.app), base_url="http://t") as c:
+        yield c, calls
 
 
 async def test_repeated_sync_is_idempotent(client):

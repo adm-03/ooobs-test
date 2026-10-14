@@ -42,3 +42,10 @@ def test_stats_and_idempotency():
     first = sync(orders)
     assert first.stats.model_dump() == {"received": 3, "unique": 1, "duplicates_merged": 1, "invalid_dropped": 1}
     assert sync(orders) == first
+
+
+def test_garbage_input_does_not_crash():
+    r = sync([_o(1, "89991234567", "abc", "oops"), "строка", _o(2, "89991234567", None, "2026-10-01T00:00:00Z")])
+    assert r.stats.received == 3
+    assert r.stats.invalid_dropped == 1
+    assert len(r.clients) == 1
