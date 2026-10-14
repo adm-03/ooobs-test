@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: orders-sync
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
